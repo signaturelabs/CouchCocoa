@@ -25,6 +25,24 @@
 @end
 
 
+@interface TestModel2 : CouchModel
+@property (readwrite,copy) NSString *name;
+@end
+
+@implementation TestModel2
+@dynamic name;
+- (void) didLoadFromDocument {
+    
+    NSLog(@"TestModel2: didLoadFromDocument");
+    NSLog(@"_replication_state: %@", [self getValueOfProperty:@"_replication_state"]);
+    NSLog(@"current doc properties: %@", [[self document] properties]);
+
+}
+
+@end
+
+
+
 @interface Test_Model : CouchTestCase
 - (TestModel*) createModelWithName: (NSString*)name grade: (int)grade;
 - (NSData*) attachmentData;
@@ -232,6 +250,25 @@
     
     TestModel* m1 = [TestModel modelForDocument: [_db documentWithID: id1]];
     STAssertEqualObjects(m1.name, @"Alice", nil);
+}
+
+- (void) test7_regression_issue64 {
+    
+    CouchDocument* doc = [_db untitledDocument];
+    TestModel2* nothing = [TestModel2 modelForDocument: doc];
+    [nothing setValue: @"hey" ofProperty: @"name"];
+    [nothing setValue: nil ofProperty: @"_replication_state"];
+    RESTOperation* op = [nothing save];
+    [op onCompletion:^{
+        if (op.error) {
+            NSLog(@"%@: Save failed, %@", self, op.error);
+        }
+        NSLog(@"%@ Save finished.  current doc properties: %@", nothing, [[nothing document] properties]);
+    }];
+    [op wait];
+    NSLog(@"Op finished.");
+
+    
 }
 
 
