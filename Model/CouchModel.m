@@ -212,12 +212,17 @@
 
 
 - (void) saveCompleted: (RESTOperation*)op {
+    COUCHLOG(@"self=%@ saveCompleted", self);
+
     if (op.error) {
         // TODO: Need a way to inform the app (and user) of the error, and not just revert
         Warn(@"%@: Save failed: %@", self, op.error);
+        COUCHLOG2(@"%@: Save failed: %@", self, op.error);
+
         [self couchDocumentChanged: _document];     // reset to contents from server
         //[NSApp presentError: op.error];
     } else {
+
         _isNew = NO;
         [_properties release];
         _properties = nil;
@@ -225,15 +230,21 @@
         _changedNames = nil;
         [_changedAttachments release];
         _changedAttachments = nil;
+        
+        COUCHLOG(@"self=%@ saveCompleted OK set _properties and _changedNames to nil: %@", self, _changedNames);
+
     }
 }
 
 
 - (RESTOperation*) save {
-    if (!_needsSave || (!_changedNames && !_changedAttachments))
+    COUCHLOG2(@"%@ Save called _changedNames: %@", self, _changedNames);
+    if (!_needsSave || (!_changedNames && !_changedAttachments)) {
+        COUCHLOG2(@"%@ !_needsSave || (!_changedNames && !_changedAttachments, aborting save", self);
         return nil;
+    }
     NSDictionary* properties = self.propertiesToSave;
-    COUCHLOG2(@"%@ Saving <- %@", self, properties);
+    COUCHLOG2(@"%@ Saving.  properties: %@ _document.properties: %@", self, properties, [_document properties]);
     self.needsSave = NO;
     RESTOperation* op = [_document putProperties: properties];
     [op onCompletion: ^{[self saveCompleted: op];}];
@@ -307,23 +318,62 @@
 
 
 - (void) cacheValue: (id)value ofProperty: (NSString*)property changed: (BOOL)changed {
+    NSString *replicationStateProperty = @"_replication_state";
+    if ([property isEqualToString:replicationStateProperty]) {
+        COUCHLOG(@"self=%@ cacheValue:ofProperty: called with property: %@ changed: %d", self, property, changed);
+        COUCHLOG(@"self=%@ backtrace: %@", self, [NSThread callStackSymbols]);
+    }
     if (!_properties)
         _properties = [[NSMutableDictionary alloc] init];
     [_properties setValue: value forKey: property];
+    if ([property isEqualToString:replicationStateProperty]) {
+        COUCHLOG(@"self=%@ _properties: %@", self, _properties);
+    }
     if (changed) {
         if (!_changedNames)
             _changedNames = [[NSMutableSet alloc] init];
         [_changedNames addObject: property];
+        if ([property isEqualToString:replicationStateProperty]) {
+            COUCHLOG(@"self=%@ added property: %@ to _changedNames: %@", self, property, _changedNames);
+        }
     }
 }
 
 
 - (id) getValueOfProperty: (NSString*)property {
+    
+    NSString *replicationStateProperty = @"_replication_state";
+
+    if ([property isEqualToString:replicationStateProperty]) {
+        COUCHLOG(@"self=%@ getValueOfProperty called with property: %@", self, replicationStateProperty);
+    }
+    
     id value = [_properties objectForKey: property];
+    if ([property isEqualToString:replicationStateProperty]) {
+        COUCHLOG(@"self=%@ value: %@ from _properties: %@", self, value, _properties);
+    }
+
     if (!value && ![_changedNames containsObject: property]) {
+        if ([property isEqualToString:replicationStateProperty]) {
+            COUCHLOG(@"self=%@ !value && ![_changedNames containsObject: property].  value: %@, _changedNames: %@", self, value, _changedNames);
+        }
         value = [_document propertyForKey: property];
+        if ([property isEqualToString:replicationStateProperty]) {
+            COUCHLOG(@"self=%@ value: %@  _document.properties: %@", self, value, [_document properties]);
+        }
+    }
+    else {
+        if ([property isEqualToString:replicationStateProperty]) {
+            COUCHLOG(@"self=%@ value || [_changedNames containsObject: property].  value: %@, _changedNames: %@ _document.properties: %@", self, value, _changedNames, [_document properties]);
+            COUCHLOG(@"self=%@ backtrace: %@", self, [NSThread callStackSymbols]);
+        }
+
+    }
+    if ([property isEqualToString:replicationStateProperty]) {
+        COUCHLOG(@"self=%@ returning value: %@", self, value);
     }
     return value;
+    
 }
 
 
