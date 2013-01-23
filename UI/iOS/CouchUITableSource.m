@@ -24,6 +24,7 @@
 
 @implementation CouchUITableSource
 
+@synthesize postQueryFilterBlock = _postQueryFilterBlock;
 
 - (id)init {
     self = [super init];
@@ -35,6 +36,7 @@
 
 
 - (void)dealloc {
+    [_postQueryFilterBlock release];
     [_rows release];
     [_query removeObserver: self forKeyPath: @"rows"];
     [_query release];
@@ -106,7 +108,24 @@
     if (rowEnum) {
         NSArray *oldRows = [_rows retain];
         [_rows release];
-        _rows = [rowEnum.allObjects mutableCopy];
+    
+        if ([self postQueryFilterBlock]) {
+            
+            NSMutableArray *filteredResults = [NSMutableArray array];
+            for (int i=0; i<[rowEnum count]; i++) {
+                CouchQueryRow *row = [rowEnum nextRow];
+                BOOL shouldIncludeRow = [self postQueryFilterBlock](row);
+                if (shouldIncludeRow) {
+                    [filteredResults addObject:row];
+                }
+            }
+            _rows = [filteredResults retain];
+            
+        }
+        else {
+            _rows = [rowEnum.allObjects mutableCopy];
+        }
+        
         [self tellDelegate: @selector(couchTableSource:willUpdateFromQuery:) withObject: _query];
         
         id delegate = _tableView.delegate;

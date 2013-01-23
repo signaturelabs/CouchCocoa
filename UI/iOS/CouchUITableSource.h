@@ -7,7 +7,10 @@
 //
 
 #import <UIKit/UIKit.h>
+
 @class CouchDocument, CouchLiveQuery, CouchQueryRow, RESTOperation;
+
+typedef BOOL(^PostQueryFilterBlock)(CouchQueryRow *row);
 
 /** A UITableView data source driven by a CouchLiveQuery. */
 @interface CouchUITableSource : NSObject <UITableViewDataSource>
@@ -15,6 +18,9 @@
 @property (nonatomic, retain) IBOutlet UITableView* tableView;
 
 @property (retain) CouchLiveQuery* query;
+
+/** if set, this block will be called back on every row of result to see if it should be ignored. */
+@property (nonatomic, copy) PostQueryFilterBlock postQueryFilterBlock;
 
 /** Rebuilds the table from the query's current .rows property. */
 -(void) reloadFromQuery;
