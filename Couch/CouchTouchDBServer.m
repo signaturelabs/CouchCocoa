@@ -60,6 +60,12 @@
     path = [path stringByAppendingPathComponent: [[NSBundle mainBundle] bundleIdentifier]];
 #endif
     path = [path stringByAppendingPathComponent: @"TouchDB"];
+    NSLog(@"path: %@", path);
+    BOOL exists = [[NSFileManager defaultManager] fileExistsAtPath:path];
+    NSLog(@"exists at path: %d", exists);
+    NSError *error = nil;
+    if (!exists)
+        [[NSFileManager defaultManager] createDirectoryAtPath:path withIntermediateDirectories:YES attributes:nil error:&error];
     return [self initWithServerPath: path options: NULL];
 }
 
